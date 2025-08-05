@@ -2,7 +2,7 @@ import { authService } from "./auth-service"
 
 // Cấu hình API - bạn chỉ cần thay đổi BASE_URL
 export const API_CONFIG = {
-  BASE_URL: "http://localhost:3030/api", // Backend API running on port 3030
+  BASE_URL: "https://vmentor-service.emg.edu.vn/api", // Backend API running on port 3030
   get USER_ID() {
     const user = authService.getCurrentUser()
     return user?.userId || "user_001" // Default user ID for admin account
