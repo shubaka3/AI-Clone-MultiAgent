@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .chat-header {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .chat-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .chat-info p {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .message.assistant {
+            align-self: flex-start;
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .message.typing {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #6b7280;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+        
+        .chat-input {
+            background: white;
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 24px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .chat-input input:focus {
+            border-color: #3b82f6;
+        }
+        
+        .chat-input button {
+            padding: 12px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .chat-input button:hover {
+            background: #2563eb;
+        }
+        
+        .chat-input button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 32px 16px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .welcome-message h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .welcome-message p {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-header">
+        <div class="chat-avatar">AI</div>
+        <div class="chat-info">
+            <h3 id="ai-name">AI Assistant</h3>
+            <p id="ai-status">Connecting...</p>
+        </div>
+    </div>
+    
+    <div class="chat-messages" id="messages">
+        <div class="welcome-message">
+            <h2>👋 Welcome!</h2>
+            <p>I'm here to help you. Ask me anything!</p>
+        </div>
+    </div>
+    
+    <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Type your message..." />
+        <button id="sendButton">Send</button>
+    </div>
+
+    <script>
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const aiId = urlParams.get('ai_id');
+        const collectionId = urlParams.get('collection_id');
+        const userId = urlParams.get('user_id');
+
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const aiNameElement = document.getElementById('ai-name');
+        const aiStatusElement = document.getElementById('ai-status');
+        
+        let isTyping = false;
+
+        // Initialize chat
+        if (aiId && collectionId && userId) {
+            console.log('Chat widget initialized with:', { aiId, collectionId, userId });
+            aiNameElement.textContent = `AI Agent ${aiId.slice(0, 8)}`;
+            aiStatusElement.textContent = 'Online • Ready to help';
+        } else {
+            console.error('Missing required parameters:', { aiId, collectionId, userId });
+            showError('Missing required parameters. Please check your embed script.');
+            return;
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            messagesContainer.appendChild(errorDiv);
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            if (isTyping) return;
+            
+            isTyping = true;
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message typing';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+            isTyping = false;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !aiId || !collectionId || !userId) return;
+
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+            sendButton.disabled = true;
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Call chat completion API
+                const response = await fetch('/api/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: message }],
+                        ai_id: aiId,
+                        user_id: userId,
+                        collection_id: collectionId,
+                        stream: false
+                    })
+                });
+
+                hideTypingIndicator();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.answer || 'I apologize, but I couldn\'t process your request at the moment.');
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    addMessage(`Sorry, I'm having trouble connecting right now. Error: ${response.status}`);
+                    console.error('API Error:', response.status, errorData);
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Chat error:', error);
+                addMessage('I\'m experiencing some technical difficulties. Please try again in a moment.');
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus input on load
+        messageInput.focus();
+
+        // Remove welcome message on first interaction
+        messageInput.addEventListener('focus', () => {
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.style.display = 'none';
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
