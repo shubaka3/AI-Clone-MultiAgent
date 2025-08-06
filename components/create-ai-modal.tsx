@@ -33,7 +33,7 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
     switch (provider) {
       case "openai":
         defaults = {
-          embedding_model_name: "text-embedding-ada-002",
+          embedding_model_name: "text-embedding-3-large",
           chat_model_name: "gpt-3.5-turbo",
           embedding_dim: "1536",
         }

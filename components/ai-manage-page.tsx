@@ -81,7 +81,7 @@ export function AiManagePage() {
         name: agentData.name,
         provider: agentData.provider,
         api_key: agentData.api_key,
-        embedding_model_name: agentData.embedding_model_name || "text-embedding-ada-002",
+        embedding_model_name: agentData.embedding_model_name || "text-embedding-3-large",
         chat_model_name: agentData.chat_model_name || "gpt-3.5-turbo",
         embedding_dim: agentData.embedding_dim || 1536,
       })
@@ -92,7 +92,7 @@ export function AiManagePage() {
         name: result.name,
         provider: agentData.provider,
         chat_model_name: agentData.chat_model_name || "gpt-3.5-turbo",
-        embedding_model_name: agentData.embedding_model_name || "text-embedding-ada-002",
+        embedding_model_name: agentData.embedding_model_name || "text-embedding-3-large",
         embedding_dim: agentData.embedding_dim || 1536,
         created_at: new Date().toISOString(),
       }
