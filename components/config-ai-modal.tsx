@@ -38,9 +38,10 @@ interface ConfigAiModalProps {
   isOpen: boolean
   onClose: () => void
   onUpdate: (agent: any) => void
+  userEmail: string
 }
 
-export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModalProps) {
+export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: ConfigAiModalProps) {
   const [collections, setCollections] = useState<Collection[]>([])
   const [newCollectionName, setNewCollectionName] = useState("")
   const [isCreatingCollection, setIsCreatingCollection] = useState(false)
@@ -128,7 +129,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModa
     // Get current domain for the embed script
     const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
     // const script = `<script src="${currentDomain}/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=\${user_id}"></script>`
-    const script = `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email={your_email}"></script>`
+    const script = `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email=${userEmail}"></script>`
     setGeneratedScript(script)
     logger.info("Script generated", { ai_id: agent.id, collection_id: selectedCollectionForScript })
   }

@@ -137,6 +137,44 @@ class AiService {
       throw error
     }
   }
+  async editAi(aiId: string, data: Partial<{
+    api_key: string
+    chat_model_name: string
+    embedding_dim: number
+    embedding_model_name: string
+    name: string
+    provider: string
+  }>): Promise<void> {
+    try {
+      const userId = this.getUserId()
+      logger.info("Editing AI agent", { ai_id: aiId, user_id: userId, data })
+
+      // Chỉ gửi các trường user nhập
+      const body: Record<string, any> = {}
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") body[key] = value
+      })
+
+      const response = await fetch(`${this.baseUrl}/api/ai/${aiId}?user_id=${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      logger.info("AI agent edited successfully", { ai_id: aiId })
+    } catch (error) {
+      logger.error("Failed to edit AI agent", { error: error instanceof Error ? error.message : String(error) })
+      throw error
+    }
+  }
+
 
   async createCollection(aiId: string, name: string): Promise<any> {
     try {

@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Settings, Trash2, Power, PowerOff } from "lucide-react"
+import { Plus, Settings, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CreateAiModal } from "@/components/create-ai-modal"
 import { ConfigAiModal } from "@/components/config-ai-modal"
+import { UpdateAiModal } from "@/components/update-ai-modal"
 import { logger } from "@/lib/logger"
 import { toast } from "@/hooks/use-toast"
 import { aiService } from "@/lib/ai-service"
@@ -31,14 +32,18 @@ interface AiAgent {
   embedding_model_name: string
   embedding_dim: number
   created_at?: string
-  status?: "active" | "inactive" // Optional for backward compatibility
+  status?: "active" | "inactive"
+  user_id?: string
 }
 
 export function AiManagePage() {
   const [agents, setAgents] = useState<AiAgent[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [configAgent, setConfigAgent] = useState<AiAgent | null>(null)
+  const [editAgent, setEditAgent] = useState<AiAgent | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState<string>("")
+
 
   useEffect(() => {
     loadAgents()
@@ -49,11 +54,12 @@ export function AiManagePage() {
       setLoading(true)
       logger.info("Loading AI agents", { action: "load_agents" })
 
-      // Get user with AIs from the API
       const user = await authService.getUserWithAIs()
       if (user && user.ai_models) {
         setAgents(user.ai_models)
+        setUserEmail(user.email || "")
         logger.info("AI agents loaded from API", { count: user.ai_models.length })
+        console.log("Loaded agents2:", user.email)
       } else {
         setAgents([])
         logger.info("No AI agents found")
@@ -70,14 +76,12 @@ export function AiManagePage() {
     }
   }
 
-
-
   const handleCreateAgent = async (agentData: any) => {
     try {
       logger.info("Creating new AI agent", { name: agentData.name, provider: agentData.provider })
 
       const result = await aiService.createAi({
-        user_id: "", // Will be set by the service from authenticated user
+        user_id: "",
         name: agentData.name,
         provider: agentData.provider,
         api_key: agentData.api_key,
@@ -86,7 +90,6 @@ export function AiManagePage() {
         embedding_dim: agentData.embedding_dim || 1536,
       })
 
-      // Create a new agent object from the API response
       const newAgent: AiAgent = {
         id: result.ai_id,
         name: result.name,
@@ -97,7 +100,6 @@ export function AiManagePage() {
         created_at: new Date().toISOString(),
       }
 
-      // Reload agents from API to get the updated list
       await loadAgents()
       setIsCreateModalOpen(false)
 
@@ -122,11 +124,7 @@ export function AiManagePage() {
       logger.info("Deleting AI agent", { id: agentId, name: agent?.name })
 
       await aiService.deleteAi(agentId)
-      
-      // Reload agents from API to get the updated list
       await loadAgents()
-
-      // Đóng modal sau khi xóa thành công
       setConfigAgent(null)
 
       logger.info("AI agent deleted successfully", { id: agentId })
@@ -160,6 +158,25 @@ export function AiManagePage() {
       })
     } catch (error) {
       logger.error("Failed to toggle AI agent status", { error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  const handleEditAgent = async (data: any) => {
+    if (!editAgent) return
+    try {
+      await aiService.editAi(editAgent.id, data)
+      await loadAgents()
+      setEditAgent(null)
+      toast({
+        title: "Success",
+        description: "AI agent updated successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update AI agent",
+        variant: "destructive",
+      })
     }
   }
 
@@ -238,12 +255,11 @@ export function AiManagePage() {
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation()
-                      // Status toggle not available in API
+                      setEditAgent(agent)
                     }}
                     className="h-8 w-8 p-0 hover:bg-blue-100"
-                    disabled
                   >
-                    <Power className="h-4 w-4 text-green-600" />
+                    <Pencil className="h-4 w-4 text-green-600" />
                   </Button>
 
                   <Button
@@ -308,6 +324,7 @@ export function AiManagePage() {
 
       {configAgent && (
         <ConfigAiModal
+          userEmail={userEmail}
           agent={configAgent}
           isOpen={!!configAgent}
           onClose={() => setConfigAgent(null)}
@@ -317,6 +334,14 @@ export function AiManagePage() {
           }}
         />
       )}
+
+  <UpdateAiModal
+    isOpen={!!editAgent}
+    onClose={() => setEditAgent(null)}
+    onSubmit={handleEditAgent}
+    initialData={editAgent || undefined}
+  />
+
     </div>
   )
 }
