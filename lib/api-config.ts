@@ -5,7 +5,7 @@ export const API_CONFIG = {
   BASE_URL: "https://vmentor-service.emg.edu.vn/api", // Backend API running on port 3030
   get USER_ID() {
     const user = authService.getCurrentUser()
-    return user?.userId || "user_001" // Default user ID for admin account
+    return user?.id || "user_001" // Default user ID for admin account
   },
 }
 

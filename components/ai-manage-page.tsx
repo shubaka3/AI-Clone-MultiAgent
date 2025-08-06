@@ -107,7 +107,7 @@ export function AiManagePage() {
         description: `AI agent "${agentData.name}" created successfully`,
       })
     } catch (error) {
-      logger.error("Failed to create AI agent", { error: error.message })
+      logger.error("Failed to create AI agent", { error: error instanceof Error ? error.message : String(error) })
       toast({
         title: "Error",
         description: "Failed to create AI agent",
@@ -135,7 +135,7 @@ export function AiManagePage() {
         description: "AI agent deleted successfully",
       })
     } catch (error) {
-      logger.error("Failed to delete AI agent", { error: error.message })
+      logger.error("Failed to delete AI agent", { error: error instanceof Error ? error.message : String(error) })
       toast({
         title: "Error",
         description: "Failed to delete AI agent",
@@ -159,7 +159,7 @@ export function AiManagePage() {
         description: `AI agent ${newStatus === "active" ? "activated" : "deactivated"}`,
       })
     } catch (error) {
-      logger.error("Failed to toggle AI agent status", { error: error.message })
+      logger.error("Failed to toggle AI agent status", { error: error instanceof Error ? error.message : String(error) })
     }
   }
 

@@ -63,7 +63,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModa
       setCollections(collections)
       logger.info("Collections loaded", { count: collections.length })
     } catch (error) {
-      logger.error("Failed to load collections", { error: error.message })
+      logger.error("Failed to load collections", { error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -86,7 +86,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModa
         description: `Collection "${newCollectionName}" created successfully`,
       })
     } catch (error) {
-      logger.error("Failed to create collection", { error: error.message })
+      logger.error("Failed to create collection", { error: error instanceof Error ? error.message : String(error) })
       toast({
         title: "Error",
         description: "Failed to create collection",
@@ -113,7 +113,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModa
         description: "Collection deleted successfully",
       })
     } catch (error) {
-      logger.error("Failed to delete collection", { error: error.message })
+      logger.error("Failed to delete collection", { error: error instanceof Error ? error.message : String(error) })
       toast({
         title: "Error",
         description: "Failed to delete collection",
@@ -127,7 +127,8 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate }: ConfigAiModa
 
     // Get current domain for the embed script
     const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-    const script = `<script src="${currentDomain}/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=\${user_id}"></script>`
+    // const script = `<script src="${currentDomain}/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=\${user_id}"></script>`
+    const script = `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email={your_email}"></script>`
     setGeneratedScript(script)
     logger.info("Script generated", { ai_id: agent.id, collection_id: selectedCollectionForScript })
   }
