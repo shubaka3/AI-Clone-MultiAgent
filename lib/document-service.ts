@@ -60,7 +60,7 @@ class DocumentService {
       logger.info("Documents uploaded successfully", { count: documents.length })
       return documents
     } catch (error) {
-      logger.error("Failed to upload documents", { error: error.message })
+      logger.error("Failed to upload documents", { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }
@@ -84,7 +84,7 @@ class DocumentService {
       })
       return result.sources || []
     } catch (error) {
-      logger.error("Failed to fetch collection documents", { error: error.message })
+      logger.error("Failed to fetch collection documents", { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }
@@ -106,7 +106,7 @@ class DocumentService {
 
       logger.info("Document deleted successfully", { collection_id: collectionId, filename })
     } catch (error) {
-      logger.error("Failed to delete document", { error: error.message })
+      logger.error("Failed to delete document", { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }
@@ -128,7 +128,7 @@ class DocumentService {
       logger.info("Document content fetched successfully", { collection_id: collectionId, filename })
       return content
     } catch (error) {
-      logger.error("Failed to fetch document content", { error: error.message })
+      logger.error("Failed to fetch document content", { error: error instanceof Error ? error.message : String(error) })
       throw error
     }
   }

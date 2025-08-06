@@ -73,11 +73,11 @@ class AiService {
 
   async listAIs(): Promise<AiAgent[]> {
     try {
-      logger.info("Fetching all AIs", { user_id: this.userId })
+      logger.info("Fetching all AIs", { user_id: this.getUserId() })
 
       // Since there's no specific endpoint to list all AIs, we'll use a mock approach for now
       // You can implement this endpoint in your backend if needed
-      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.LIST_AIS}?user_id=${this.userId}`)
+      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.LIST_AIS}?user_id=${this.getUserId()}`)
 
       if (!response.ok) {
         // If the endpoint doesn't exist, return empty array for now

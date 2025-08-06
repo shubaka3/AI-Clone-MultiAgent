@@ -35,7 +35,7 @@ export function UserMenu({ username, onLogout }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-blue-600 text-white text-xs">{getInitials(username)}</AvatarFallback>
+            <AvatarFallback className="bg-blue-600 text-white text-xs">{getInitials(username || 'User')}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

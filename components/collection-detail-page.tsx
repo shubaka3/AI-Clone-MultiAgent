@@ -158,7 +158,7 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
         description: `${files.length} document(s) uploaded successfully`,
       })
     } catch (error) {
-      logger.error("Failed to upload documents", { error: error.message })
+      logger.error("Failed to upload documents", { error: error instanceof Error ? error.message : String(error) })
       toast({
         title: "Error",
         description: "Failed to upload documents",
@@ -232,32 +232,32 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
     }
   }
 
-  const handleDownloadDocument = (document: Document) => {
+  const handleDownloadDocument = (doc: Document) => {
     // Simulate download
-    const blob = new Blob([document.content || "Document content"], { type: document.type })
+    const blob = new Blob([doc.content || "Document content"], { type: doc.type })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = window.document.createElement("a")
     a.href = url
-    a.download = document.name
+    a.download = doc.name
     a.click()
     URL.revokeObjectURL(url)
 
-    logger.info("Document downloaded", { id: document.id, name: document.name })
+    logger.info("Document downloaded", { id: doc.id, name: doc.name })
     toast({
       title: "Success",
-      description: `Document "${document.name}" downloaded`,
+      description: `Document "${doc.name}" downloaded`,
     })
   }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes || bytes === 0) return "0 Bytes"
     const k = 1024
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-800"
@@ -389,7 +389,7 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
 
                 <div className="text-xs text-slate-500 mb-4 space-y-1">
                   <div>{formatFileSize(document.size)}</div>
-                  <div>{new Date(document.uploaded_at).toLocaleDateString()}</div>
+                  <div>{document.uploaded_at ? new Date(document.uploaded_at).toLocaleDateString() : 'Unknown date'}</div>
                 </div>
 
                 <div className="flex gap-1">
@@ -478,7 +478,7 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
                   </div>
                   <div>
                     <span className="font-medium">Uploaded:</span>
-                    <div className="text-slate-600">{new Date(selectedDocument.uploaded_at).toLocaleDateString()}</div>
+                    <div className="text-slate-600">{selectedDocument.uploaded_at ? new Date(selectedDocument.uploaded_at).toLocaleDateString() : 'Unknown date'}</div>
                   </div>
                 </div>
 
