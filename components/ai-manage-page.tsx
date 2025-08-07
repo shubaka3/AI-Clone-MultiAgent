@@ -34,6 +34,8 @@ interface AiAgent {
   created_at?: string
   status?: "active" | "inactive"
   user_id?: string
+  tool?: string 
+  ai_domain?: string 
 }
 
 export function AiManagePage() {
@@ -60,6 +62,7 @@ export function AiManagePage() {
         setUserEmail(user.email || "")
         logger.info("AI agents loaded from API", { count: user.ai_models.length })
         console.log("Loaded agents2:", user.email)
+        console.log("Loaded agents2:", user.ai_models)
       } else {
         setAgents([])
         logger.info("No AI agents found")
@@ -88,6 +91,8 @@ export function AiManagePage() {
         embedding_model_name: agentData.embedding_model_name || "text-embedding-3-large",
         chat_model_name: agentData.chat_model_name || "gpt-3.5-turbo",
         embedding_dim: agentData.embedding_dim || 1536,
+        tool: agentData.tool || null,
+        ai_domain: agentData.ai_domain || null,
       })
 
       const newAgent: AiAgent = {
@@ -98,6 +103,8 @@ export function AiManagePage() {
         embedding_model_name: agentData.embedding_model_name || "text-embedding-3-large",
         embedding_dim: agentData.embedding_dim || 1536,
         created_at: new Date().toISOString(),
+        tool: agentData.tool || null,
+        ai_domain: agentData.ai_domain || null,
       }
 
       await loadAgents()

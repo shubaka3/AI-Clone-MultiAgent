@@ -24,6 +24,8 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
     embedding_model_name: "",
     chat_model_name: "",
     embedding_dim: "",
+    tool: "", 
+    ai_domain: "", 
   })
 
   const handleProviderChange = (provider: string) => {
@@ -54,6 +56,7 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
         break
       case "custom":
         defaults = {
+          api_key: "custom_apikey",
           embedding_model_name: "custom-embedding",
           chat_model_name: "custom-chat",
           embedding_dim: "512",
@@ -75,6 +78,8 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
       embedding_model_name: "",
       chat_model_name: "",
       embedding_dim: "",
+      tool: "",
+      ai_domain: "",
     })
   }
 
@@ -112,28 +117,33 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="api_key">API Key</Label>
-            <Input
-              id="api_key"
-              type="password"
-              value={formData.api_key}
-              onChange={(e) => setFormData((prev) => ({ ...prev, api_key: e.target.value }))}
-              placeholder="Enter API key"
-              required
-            />
-          </div>
+          {formData.provider !== "custom" && (
+            <div>
+              <Label htmlFor="api_key">API Key</Label>
+              <Input
+                id="api_key"
+                type="password"
+                value={formData.api_key}
+                onChange={(e) => setFormData((prev) => ({ ...prev, api_key: e.target.value }))}
+                placeholder="Enter API key"
+                required
+              />
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="embedding_model">Embedding Model</Label>
-            <Input
-              id="embedding_model"
-              value={formData.embedding_model_name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, embedding_model_name: e.target.value }))}
-              placeholder="Embedding model name"
-              required
-            />
-          </div>
+          {formData.provider !== "custom" && (
+            <div>
+              <Label htmlFor="embedding_model">Embedding Model</Label>
+              <Input
+                id="embedding_model"
+                value={formData.embedding_model_name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, embedding_model_name: e.target.value }))}
+                placeholder="Embedding model name"
+                required
+              />
+            </div>
+          )}
+
 
           <div>
             <Label htmlFor="chat_model">Chat Model</Label>
@@ -146,17 +156,52 @@ export function CreateAiModal({ isOpen, onClose, onSubmit }: CreateAiModalProps)
             />
           </div>
 
-          <div>
-            <Label htmlFor="embedding_dim">Embedding Dimension</Label>
-            <Input
-              id="embedding_dim"
-              type="number"
-              value={formData.embedding_dim}
-              onChange={(e) => setFormData((prev) => ({ ...prev, embedding_dim: e.target.value }))}
-              placeholder="Embedding dimension"
-              required
-            />
-          </div>
+          {formData.provider !== "custom" && (
+            <div>
+              <Label htmlFor="embedding_dim">Embedding Dimension</Label>
+              <Input
+                id="embedding_dim"
+                type="number"
+                value={formData.embedding_dim}
+                onChange={(e) => setFormData((prev) => ({ ...prev, embedding_dim: e.target.value }))}
+                placeholder="Embedding dimension"
+                required
+              />
+            </div>
+          )}
+
+          {formData.provider === "custom" && (
+            <>
+              <div>
+                <Label htmlFor="tool">Tool</Label>
+                <Select
+                  value={formData.tool}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, tool: value }))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select tool" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="proxy-n8n">proxy-n8n</SelectItem>
+                    <SelectItem value="proxy-ai">proxy-ai</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="ai_domain">AI Domain</Label>
+                <Input
+                  id="ai_domain"
+                  value={formData.ai_domain}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, ai_domain: e.target.value }))}
+                  placeholder="Enter domain"
+                  required
+                />
+              </div>
+            </>
+          )}
+
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

@@ -23,6 +23,8 @@ export interface AiAgent {
   chat_model_name: string
   embedding_model_name: string
   embedding_dim: number
+  tool?: string        // ✅ thêm field này
+  ai_domain?: string   
 }
 
 export interface CreateUserRequest {

@@ -10,6 +10,8 @@ export interface CreateAiRequest {
   embedding_model_name: string
   chat_model_name: string
   embedding_dim: number
+  tool: string | null
+  ai_domain:string | null
 }
 
 export interface AiAgent {
@@ -20,6 +22,8 @@ export interface AiAgent {
   embedding_model_name: string
   embedding_dim: number
   created_at: string
+  tool: string | null
+  ai_domain:string | null
 }
 
 class AiService {
@@ -144,6 +148,8 @@ class AiService {
     embedding_model_name: string
     name: string
     provider: string
+    tool: string | null
+    ai_domain:string | null
   }>): Promise<void> {
     try {
       const userId = this.getUserId()
@@ -155,7 +161,7 @@ class AiService {
         if (value !== undefined && value !== "") body[key] = value
       })
 
-      const response = await fetch(`${this.baseUrl}/api/ai/${aiId}?user_id=${userId}`, {
+      const response = await fetch(`${this.baseUrl}/ai/${aiId}?user_id=${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

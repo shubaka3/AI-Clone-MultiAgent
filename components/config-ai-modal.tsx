@@ -1,5 +1,7 @@
 "use client"
 
+import { useMemo } from "react"
+// useMemo để theo dõi agent.tool để tính toán lại script khi agent.tool thay đổi
 import { useState, useEffect } from "react"
 import { Plus, Eye, Trash2, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,6 +51,14 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
   const [generatedScript, setGeneratedScript] = useState("")
   const [scriptCopied, setScriptCopied] = useState(false)
   const [showEmbeddingWarning, setShowEmbeddingWarning] = useState(true)
+  const isProxyTool = useMemo(() => {
+    return agent?.tool === "proxy-n8n" || agent?.tool === "proxy-ai"
+  }, [agent?.tool])
+  console.log("Agent received in modal:", agent)
+  console.log("agent.tool:", agent?.tool)
+  console.log("isProxyTool:", isProxyTool)
+  
+
 
   useEffect(() => {
     if (isOpen) {
@@ -123,16 +133,32 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
     }
   }
 
-  const generateScript = () => {
-    if (!selectedCollectionForScript) return
+  // const generateScript = () => {
+  //   if (!selectedCollectionForScript) return
 
-    // Get current domain for the embed script
+  //   // Get current domain for the embed script
+  //   const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+  //   // const script = `<script src="${currentDomain}/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=\${user_id}"></script>`
+  //   const script = `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email=${userEmail}"></script>`
+  //   setGeneratedScript(script)
+  //   logger.info("Script generated", { ai_id: agent.id, collection_id: selectedCollectionForScript })
+  // }
+  const generateScript = () => {
+    if (!isProxyTool && !selectedCollectionForScript) return
+  
     const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-    // const script = `<script src="${currentDomain}/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=\${user_id}"></script>`
-    const script = `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email=${userEmail}"></script>`
+  
+    const script = isProxyTool
+      ? `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=6g2ga-4495-851-8s22-a8a33&email=${userEmail}"></script>`
+      : `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email=${userEmail}"></script>`
+  
     setGeneratedScript(script)
-    logger.info("Script generated", { ai_id: agent.id, collection_id: selectedCollectionForScript })
+    logger.info("Script generated", {
+      ai_id: agent.id,
+      collection_id: isProxyTool ? null : selectedCollectionForScript
+    })
   }
+  
 
   const copyScript = async () => {
     try {
@@ -162,6 +188,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
 
           <div className="space-y-6">
             {/* Collections Section */}
+            {!isProxyTool && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Collections</h3>
 
@@ -245,12 +272,13 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
                 ))}
               </div>
             </div>
-
+            )}
             {/* Script Generation Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Generate Embed Script</h3>
 
               <div className="space-y-4">
+              {!isProxyTool && (
                 <div>
                   <Label>Select Collection</Label>
                   <Select value={selectedCollectionForScript} onValueChange={setSelectedCollectionForScript}>
@@ -266,10 +294,10 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
                     </SelectContent>
                   </Select>
                 </div>
-
+              )}
                 <Button
                   onClick={generateScript}
-                  disabled={!selectedCollectionForScript}
+                  disabled={!isProxyTool && !selectedCollectionForScript}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   Generate Script
