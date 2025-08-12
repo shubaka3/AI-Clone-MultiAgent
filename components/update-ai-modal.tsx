@@ -185,8 +185,9 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
               <div>
                 <Label htmlFor="tool">Tool</Label>
                 <Select
-                  value={formData.tool}
+                  value={formData.tool || ""}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, tool: value }))}
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select tool" />
@@ -198,17 +199,44 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
                 </Select>
               </div>
 
+              {/* Nếu tool = proxy-ai thì hiển thị API Key */}
+              {formData.tool === "proxy-ai" && (
+                <div>
+                  <Label htmlFor="api_key">API Key</Label>
+                  <Input
+                    id="api_key"
+                    type="password"
+                    value={formData.api_key || ""} // Luôn có string
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, api_key: e.target.value }))
+                    }
+                    placeholder="Enter API key"
+                    required
+                  />
+                </div>
+              )}
+
               <div>
-                <Label htmlFor="ai_domain">AI Domain</Label>
+                <Label htmlFor="ai_domain">
+                  {formData.tool === "proxy-ai" ? "Assistants ID" : "AI Domain"}
+                </Label>
                 <Input
                   id="ai_domain"
-                  value={formData.ai_domain}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, ai_domain: e.target.value }))}
-                  placeholder="Enter domain"
+                  value={formData.ai_domain || ""} // Luôn có string
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, ai_domain: e.target.value }))
+                  }
+                  placeholder={
+                    formData.tool === "proxy-ai"
+                      ? "Enter Assistants ID"
+                      : "Enter domain"
+                  }
+                  required
                 />
               </div>
             </>
           )}
+
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
