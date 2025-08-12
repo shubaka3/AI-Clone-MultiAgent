@@ -45,7 +45,7 @@ export function AiManagePage() {
   const [editAgent, setEditAgent] = useState<AiAgent | null>(null)
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState<string>("")
-
+  const [userId, setUserId] = useState<string>("")
 
   useEffect(() => {
     loadAgents()
@@ -60,9 +60,11 @@ export function AiManagePage() {
       if (user && user.ai_models) {
         setAgents(user.ai_models)
         setUserEmail(user.email || "")
+        setUserId(user.id || "")
         logger.info("AI agents loaded from API", { count: user.ai_models.length })
         console.log("Loaded agents2:", user.email)
-        console.log("Loaded agents2:", user.ai_models)
+        console.log("Loaded agents3:", user.ai_models)
+        console.log("Loaded agents4:", user.id)
       } else {
         setAgents([])
         logger.info("No AI agents found")
@@ -332,6 +334,7 @@ export function AiManagePage() {
       {configAgent && (
         <ConfigAiModal
           userEmail={userEmail}
+          userId={userId}   
           agent={configAgent}
           isOpen={!!configAgent}
           onClose={() => setConfigAgent(null)}
