@@ -41,9 +41,10 @@ interface ConfigAiModalProps {
   onClose: () => void
   onUpdate: (agent: any) => void
   userEmail: string
+  userId?: string 
 }
 
-export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: ConfigAiModalProps) {
+export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail, userId }: ConfigAiModalProps) {
   const [collections, setCollections] = useState<Collection[]>([])
   const [newCollectionName, setNewCollectionName] = useState("")
   const [isCreatingCollection, setIsCreatingCollection] = useState(false)
@@ -51,12 +52,15 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
   const [generatedScript, setGeneratedScript] = useState("")
   const [scriptCopied, setScriptCopied] = useState(false)
   const [showEmbeddingWarning, setShowEmbeddingWarning] = useState(true)
+  const [generatedModel, setGeneratedModel] = useState("") // thêm state để lưu model string sau khi tạotạo
   const isProxyTool = useMemo(() => {
     return agent?.tool === "proxy-n8n" || agent?.tool === "proxy-ai"
   }, [agent?.tool])
   console.log("Agent received in modal:", agent)
   console.log("agent.tool:", agent?.tool)
   console.log("isProxyTool:", isProxyTool)
+  console.log("Received userId in ConfigAiModal:", userId)
+
   
 
 
@@ -69,7 +73,6 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
   const loadCollections = async () => {
     try {
       logger.info("Loading collections for AI", { ai_id: agent.id })
-
       const collections = await aiService.getAiCollections(agent.id)
       setCollections(collections)
       logger.info("Collections loaded", { count: collections.length })
@@ -147,18 +150,45 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
     if (!isProxyTool && !selectedCollectionForScript) return
   
     const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-  
+    const collectionId = selectedCollectionForScript || "null" // thêm collection id 
+
     const script = isProxyTool
       ? `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=6g2ga-4495-851-8s22-a8a33&email=${userEmail}"></script>`
       : `<script src="https://vmentor.emg.edu.vn/ui/embed.js?encryption_api=${agent.id}&encryption_secret=${selectedCollectionForScript}&email=${userEmail}"></script>`
   
+    const modelStr = `${agent.id}&${collectionId}&${userId || "null"}` // dùng collection id ở đây 
+
     setGeneratedScript(script)
+    setGeneratedModel(modelStr)
+
     logger.info("Script generated", {
       ai_id: agent.id,
       collection_id: isProxyTool ? null : selectedCollectionForScript
     })
   }
   
+  const [modelCopied, setModelCopied] = useState(false)
+  const modelString = `${agent.id}&${selectedCollectionForScript}&${userId}`
+
+  const copyModelString = async () => {
+    try {
+      await navigator.clipboard.writeText(modelString)
+      setModelCopied(true)
+      setTimeout(() => setModelCopied(false), 2000)
+      toast({
+        title: "Success",
+        description: "Model string copied to clipboard",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy model string",
+        variant: "destructive",
+      })
+    }
+  }
+
+
 
   const copyScript = async () => {
     try {
@@ -313,19 +343,22 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail }: C
                         {scriptCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
-
-                    <Alert>
-                      <AlertDescription>
-                        <strong>Note:</strong> Replace <code>{"${user_id}"}</code> with the actual user ID when
-                        implementing.
-                        <br />
-                        <strong>Example:</strong>{" "}
-                        <code>{`<script src="https://abc/embed.js?ai_id=${agent.id}&collection_id=${selectedCollectionForScript}&user_id=789"></script>`}</code>
-                      </AlertDescription>
-                    </Alert>
                   </div>
                 )}
               </div>
+              {generatedModel && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-2">Model ID</h3>
+                  <div className="relative">
+                    <pre className="bg-slate-100 p-4 rounded-lg text-sm overflow-x-auto select-all">
+                      <code>{generatedModel}</code>
+                    </pre>
+                    <Button size="sm" variant="ghost" onClick={copyModelString} className="absolute top-2 right-2">
+                      {modelCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>
