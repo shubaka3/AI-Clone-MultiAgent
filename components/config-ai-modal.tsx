@@ -291,7 +291,7 @@ export function ConfigAiModal({ agent, isOpen, onClose, onUpdate, userEmail, use
                     <CardContent className="pt-0">
                       <div className="flex justify-between items-center">
                         <Badge variant="secondary" className="text-xs">
-                          {collection.document_count || 0} docs
+                          {/* {collection.document_count || 0} docs */}
                         </Badge>
                         <span className="text-xs text-slate-500">
                           {new Date(collection.created_at).toLocaleDateString()}

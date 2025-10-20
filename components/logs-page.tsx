@@ -89,6 +89,8 @@ export function LogsPage() {
         <div>
           <h2 className="text-3xl font-bold text-slate-800">System Logs</h2>
           <p className="text-slate-600 mt-1">Monitor system activities and debug information</p>
+          <p className="text-slate-600 mt-1">This product build by Huỳnh Phú Thiện and his Team TPL</p>
+
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportLogs}>

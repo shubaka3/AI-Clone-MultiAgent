@@ -95,6 +95,7 @@ export function AiManagePage() {
         embedding_dim: agentData.embedding_dim || 1536,
         tool: agentData.tool || null,
         ai_domain: agentData.ai_domain || null,
+        prompt:""
       })
 
       const newAgent: AiAgent = {

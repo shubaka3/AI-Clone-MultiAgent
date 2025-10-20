@@ -9,6 +9,8 @@ import { LoginPage } from "@/components/login-page"
 import { UserMenu } from "@/components/user-menu"
 import { authService } from "@/lib/auth-service"
 import { logger } from "@/lib/logger"
+// Import component trang mới
+import { AiCollectionsPage } from "@/components/ai-collections-page"
 
 interface User {
   id: string
@@ -46,6 +48,9 @@ export default function Dashboard() {
     switch (currentPage) {
       case "ai-manage":
         return <AiManagePage />
+      // Thêm case để render trang AI Collections
+      case "ai-collections":
+        return <AiCollectionsPage />
       case "logs":
         return <LogsPage />
       default:

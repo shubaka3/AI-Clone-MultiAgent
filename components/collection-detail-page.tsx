@@ -2,14 +2,14 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Upload, FileText, Trash2, Eye, Download, Filter } from "lucide-react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { ArrowLeft, Upload, FileText, Trash2, Eye, Download, Filter, BookOpenText, X, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { logger } from "@/lib/logger"
 import { toast } from "@/hooks/use-toast"
@@ -48,6 +48,12 @@ interface CollectionDetailPageProps {
   aiId: string
 }
 
+interface TemporaryData {
+    data: { [key: string]: string };
+    timestamp: number;
+}
+
+
 export function CollectionDetailPage({ collectionId, collectionName, aiId }: CollectionDetailPageProps) {
   const [documents, setDocuments] = useState<Document[]>([])
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([])
@@ -58,7 +64,41 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
   const [uploadProgress, setUploadProgress] = useState(0)
   const [loading, setLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const extractFileInputRef = useRef<HTMLInputElement>(null) // Thêm ref mới
+  const [showExtractModal, setShowExtractModal] = useState(false)
+  const [numPagesToExtract, setNumPagesToExtract] = useState(1) // Mặc định là 1
+  const [filesToExtract, setFilesToExtract] = useState<FileList | null>(null)
+  const [extractedData, setExtractedData] = useState<{ [key: string]: string } | null>(null)
+  const [showExtractedContentModal, setShowExtractedContentModal] = useState(false)
+  const [temporaryData, setTemporaryData] = useState<TemporaryData | null>(null)
+  const [remainingTime, setRemainingTime] = useState<number>(0);
 
+  const clearTemporaryData = useCallback(() => {
+    setTemporaryData(null);
+    setRemainingTime(0);
+  }, []);
+
+  const clearExpiredData = useCallback(() => {
+      if (temporaryData) {
+          const now = Date.now();
+          const expireTime = temporaryData.timestamp + 5 * 60 * 1000; // 5 phút
+          if (now >= expireTime) {
+              clearTemporaryData();
+              toast({
+                  title: "Temporary Data Expired",
+                  description: "The extracted data has been automatically cleared.",
+              });
+          }
+      }
+  }, [temporaryData, clearTemporaryData]);
+
+
+  const [customPrefix, setCustomPrefix] = useState("");
+  const [chunkSize, setChunkSize] = useState("0");
+  const [maxTokens, setMaxTokens] = useState("256");
+  const [xlsxRowLimit, setXlsxRowLimit] = useState("50");
+
+  
   useEffect(() => {
     loadDocuments()
   }, [collectionId])
@@ -66,6 +106,31 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
   useEffect(() => {
     filterDocuments()
   }, [documents, searchTerm, statusFilter])
+
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (temporaryData) {
+        const calculateRemaining = () => {
+            const now = Date.now();
+            const expireTime = temporaryData.timestamp + 5 * 60 * 1000;
+            const remaining = Math.max(0, expireTime - now);
+            setRemainingTime(Math.ceil(remaining / 1000));
+            if (remaining <= 0) {
+                clearExpiredData();
+                if (interval) clearInterval(interval);
+            }
+        };
+        calculateRemaining();
+        interval = setInterval(calculateRemaining, 1000);
+    } else if (interval) {
+        clearInterval(interval);
+    }
+    return () => {
+        if (interval) clearInterval(interval);
+    };
+  }, [temporaryData, clearExpiredData]);
+
 
   const loadDocuments = async () => {
     try {
@@ -111,67 +176,196 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
     setFilteredDocuments(filtered)
   }
 
+// Cập nhật hàm để xử lý nhiều tệp
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files || files.length === 0) return
 
+    const fileList = Array.from(files);
+
     try {
-      setIsUploading(true)
-      setUploadProgress(0)
+      setIsUploading(true);
+      setUploadProgress(0); // Có thể cần thay đổi logic nếu muốn hiển thị tiến trình tổng thể
 
       logger.info("Uploading multiple documents", {
-        count: files.length,
+        count: fileList.length,
         collection_id: collectionId,
-      })
+      });
 
-      const uploadPromises = Array.from(files).map(async (file, index) => {
-        try {
-          await aiService.uploadDocument(file, aiId, collectionId)
-          
-          return {
-            id: Date.now().toString() + index,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            uploaded_at: new Date().toISOString(),
-            status: "completed" as const,
-          }
-        } catch (error) {
-          logger.error("Failed to upload file", { filename: file.name, error })
-          return {
-            id: Date.now().toString() + index,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            uploaded_at: new Date().toISOString(),
-            status: "failed" as const,
-          }
-        }
-      })
+      // Gọi hàm superUploadDocuments với các tham số tương ứng
+      const uploadRequest = {
+        files: fileList,
+        ai_id: aiId,
+        collection_id: collectionId,
+        user_id: aiService.getUserId(),
+        custom_prefix: undefined, // Thay đổi từ null sang undefined
+        chunk_size: undefined,    // Thay đổi từ null sang undefined
+        max_tokens: undefined,    // Thay đổi từ null sang undefined
+        xlsx_row_limit: undefined, // Thay đổi từ null sang undefined
+      };
+      
+      await aiService.superUploadDocuments(uploadRequest);
 
-      const uploadedDocuments = await Promise.all(uploadPromises)
-      setDocuments((prev) => [...prev, ...uploadedDocuments])
+      // Sau khi tải lên hoàn tất, tải lại danh sách tài liệu
+      await loadDocuments();
 
-      logger.info("Documents uploaded successfully", { count: files.length })
+      logger.info("All documents uploaded successfully");
       toast({
         title: "Success",
-        description: `${files.length} document(s) uploaded successfully`,
-      })
+        description: `${fileList.length} document(s) uploaded successfully`,
+      });
     } catch (error) {
-      logger.error("Failed to upload documents", { error: error instanceof Error ? error.message : String(error) })
+      logger.error("Failed to upload documents", { error: error instanceof Error ? error.message : String(error) });
       toast({
         title: "Error",
         description: "Failed to upload documents",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
+      setIsUploading(false);
+      setUploadProgress(0);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""
+        fileInputRef.current.value = "";
       }
     }
-  }
+  };
+  // upload kèm xử lý extract 
+  // const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const files = event.target.files;
+  //   if (!files || files.length === 0) {
+  //     if (fileInputRef.current) {
+  //       fileInputRef.current.value = "";
+  //     }
+  //     return;
+  //   }
+    
+  //   // Lưu danh sách files vào state để sử dụng sau
+  //   setFilesToExtract(files);
+  //   // Hiển thị modal để người dùng xác nhận hoặc tùy chỉnh
+  //   setShowExtractModal(true);
+  // };
+  
+  const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+        setFilesToExtract(files);
+    }
+  };
+
+  // Hàm xử lý upload và trích xuất nội dung
+  // const handleExtractAndUpload = async () => {
+  //   if (!filesToExtract || filesToExtract.length === 0) return;
+
+  //   try {
+  //       setIsUploading(true);
+  //       setUploadProgress(0);
+
+  //       const formData = new FormData();
+  //       Array.from(filesToExtract).forEach(file => {
+  //           formData.append('files', file);
+  //       });
+  //       formData.append('num', numPagesToExtract.toString());
+
+  //       const response = await fetch("http://127.0.0.1:3030/api/extract-first-pages", {
+  //           method: 'POST',
+  //           body: formData,
+  //       });
+
+  //       if (!response.ok) {
+  //           throw new Error('Network response was not ok');
+  //       }
+
+  //       const data = await response.json();
+  //       setExtractedData(data);
+  //       setTemporaryData({ data, timestamp: Date.now() }); // Lưu tạm thời
+  //       setShowExtractModal(false); // Đóng modal sau khi gửi
+  //       setShowExtractedContentModal(true);
+
+  //       logger.info("Documents extracted successfully", { count: filesToExtract.length });
+  //       toast({
+  //           title: "Success",
+  //           description: `${filesToExtract.length} document(s) extracted successfully`,
+  //       });
+
+  //   } catch (error) {
+  //       logger.error("Failed to extract documents", { error: error instanceof Error ? error.message : String(error) });
+  //       toast({
+  //           title: "Error",
+  //           description: "Failed to extract documents",
+  //           variant: "destructive",
+  //       });
+  //   } finally {
+  //       setIsUploading(false);
+  //       setUploadProgress(0);
+  //       setFilesToExtract(null);
+  //   }
+  // };
+  const handleExtractAndUpload = async () => {
+      if (!filesToExtract || filesToExtract.length === 0) return;
+
+      try {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const formData = new FormData();
+        Array.from(filesToExtract).forEach(file => {
+            formData.append('files', file);
+        });
+        // Đảm bảo rằng numPagesToExtract có giá trị
+        formData.append('num', numPagesToExtract.toString());
+
+        const response = await fetch("http://127.0.0.1:3030/api/extract-first-pages", {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        setExtractedData(data);
+        setTemporaryData({ data, timestamp: Date.now() });
+        setShowExtractModal(false);
+        setShowExtractedContentModal(true);
+        
+        // LOGIC MỚI - GỌI HÀM SUPER_UPLOAD
+        const filesToUpload = Array.from(filesToExtract);
+        const uploadRequest = {
+            files: filesToUpload,
+            ai_id: aiId,
+            collection_id: collectionId,
+            user_id: aiService.getUserId(),
+            custom_prefix: undefined,
+            chunk_size: undefined,
+            max_tokens: undefined,
+            xlsx_row_limit: undefined,
+        };
+        
+        await aiService.superUploadDocuments(uploadRequest);
+
+        // Sau khi tải lên hoàn tất, cập nhật lại danh sách documents
+        await loadDocuments();
+
+        logger.info("Documents extracted and uploaded successfully", { count: filesToExtract.length });
+        toast({
+            title: "Success",
+            description: `${filesToExtract.length} document(s) extracted and uploaded successfully`,
+        });
+
+      } catch (error) {
+          logger.error("Failed to extract or upload documents", { error: error instanceof Error ? error.message : String(error) });
+          toast({
+              title: "Error",
+              description: "Failed to process documents",
+              variant: "destructive",
+          });
+      } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+          setFilesToExtract(null);
+      }
+  };
 
   const handleDeleteDocument = async (documentId: string) => {
     try {
@@ -320,6 +514,23 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
               accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif,.bmp,.webp"
               multiple
             />
+            
+            <Button
+                onClick={() => setShowExtractModal(true)}
+                disabled={isUploading}
+                className="bg-green-600 hover:bg-green-700"
+            >
+                <BookOpenText className="h-4 w-4 mr-2" />
+                Extract Text
+            </Button>
+            <input
+                ref={extractFileInputRef}
+                type="file"
+                onChange={handleFileSelection}
+                className="hidden"
+                accept=".pdf,.docx,.pptx"
+                multiple
+            />
           </div>
         </div>
 
@@ -388,7 +599,7 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
                 </h3>
 
                 <div className="text-xs text-slate-500 mb-4 space-y-1">
-                  <div>{formatFileSize(document.size)}</div>
+                  {/* <div>{formatFileSize(document.size)}</div> */}
                   <div>{document.uploaded_at ? new Date(document.uploaded_at).toLocaleDateString() : 'Unknown date'}</div>
                 </div>
 
@@ -466,7 +677,7 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Size:</span>
-                    <div className="text-slate-600">{formatFileSize(selectedDocument.size)}</div>
+                    {/* <div className="text-slate-600">{formatFileSize(selectedDocument.size)}</div> */}
                   </div>
                   <div>
                     <span className="font-medium">Type:</span>
@@ -533,7 +744,148 @@ export function CollectionDetailPage({ collectionId, collectionName, aiId }: Col
             </DialogContent>
           </Dialog>
         )}
+        
+        {/* Modal để nhập số trang trích xuất */}
+        <Dialog open={showExtractModal} onOpenChange={setShowExtractModal}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Extract Text from Documents</DialogTitle>
+                    <DialogDescription>
+                        Select documents and choose the number of pages/sections to extract.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div>
+                        <label htmlFor="num-pages" className="block text-sm font-medium text-gray-700 mb-1">
+                            Number of Pages to Extract
+                        </label>
+                        <Input
+                            id="num-pages"
+                            type="number"
+                            min="1"
+                            value={numPagesToExtract}
+                            onChange={(e) => setNumPagesToExtract(Number(e.target.value))}
+                            className="w-full"
+                        />
+                    </div>
+                    <Button
+                        onClick={() => extractFileInputRef.current?.click()}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Select Files for Extraction
+                    </Button>
+                </div>
+                {filesToExtract && (
+                    <DialogFooter className="mt-4">
+                        <div className="flex-1 text-sm text-gray-500 mr-4">
+                            Đã chọn {filesToExtract.length} file.
+                        </div>
+                        <Button
+                            onClick={handleExtractAndUpload}
+                            disabled={isUploading}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {isUploading ? "Extracting..." : "Start Extraction"}
+                        </Button>
+                    </DialogFooter>
+                )}
+            </DialogContent>
+        </Dialog>
+
+        {/* Modal hiển thị nội dung trích xuất */}
+        {(extractedData || temporaryData) && (
+            <Dialog open={showExtractedContentModal} onOpenChange={setShowExtractedContentModal}>
+                <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Extracted Content & AI Prompt</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        {/* Cột Nội dung trích xuất */}
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-lg">Extracted Content:</h4>
+                            <div className="bg-slate-50 p-4 rounded-lg max-h-[60vh] overflow-y-auto space-y-4">
+                                {Object.entries(temporaryData?.data || extractedData!).map(([fileName, content], index) => (
+                                    <div key={fileName} className="p-4 border rounded-md border-gray-200">
+                                        <h5 className="font-medium text-base mb-1">
+                                            {index + 1}. **{fileName}**
+                                        </h5>
+                                        <pre className="whitespace-pre-wrap text-sm text-slate-800">
+                                            {content}
+                                        </pre>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Cột Prompt AI */}
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-lg">AI Prompt:</h4>
+                            <div className="bg-slate-50 p-4 rounded-lg max-h-[60vh] overflow-y-auto">
+                                <pre className="whitespace-pre-wrap text-sm text-slate-800">
+                                    {`You are a ${collectionName} AI.
+You always respond in a friendly, natural, and human-like way, like a supportive classroom teacher. Never use robotic phrasing, meta comments (e.g., “as an AI”), or references to “context,” “user,” or “assistant.”
+
+Inputs you will receive:
+
+User text: the student’s question or message.
+
+RAG data: retrieved knowledge from the ${collectionName} (Lessons 1–35).
+
+Your role:
+
+Use the RAG data as the main source of truth for your answers.
+
+If the student asks about something outside the ${collectionName} curriculum, politely guide them back by saying you can only help with the listed topics.
+
+Give explanations that are clear, concise, and easy to understand.
+
+Use examples, analogies, or simple comparisons when helpful.
+
+If the student seems confused, explain again in a simpler way.
+
+Encourage curiosity and make learning enjoyable.
+
+${collectionName} Road Map - Learning Path:
+T is Topic & G is Gramma
+${Object.entries(temporaryData?.data || extractedData!).map(([fileName, content], index) => 
+    `${index + 1} - ${content.substring(0, 100).replace(/\n/g, ' ')}...`).join('\n')
+}
+
+this is RAG data you receive
+{context}
+and this is user's text 
+{question}`}
+                                </pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="ghost" onClick={clearTemporaryData}>
+                            <X className="h-4 w-4 mr-2" />
+                            Clear Data
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )}
       </div>
+
+      {/* Button hiển thị dữ liệu tạm thời */}
+      {temporaryData && (
+          <div className="fixed bottom-6 right-6 z-50">
+              <Button
+                  onClick={() => setShowExtractedContentModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full h-16 w-16 shadow-lg flex-col items-center justify-center p-2"
+              >
+                  <FileText className="h-6 w-6" />
+                  <span className="text-xs mt-1 leading-none">View Data</span>
+                  <span className="text-xs mt-1 leading-none flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {remainingTime}s
+                  </span>
+              </Button>
+          </div>
+      )}
     </div>
   )
 }

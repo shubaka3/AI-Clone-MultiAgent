@@ -11,8 +11,8 @@ export interface CreateAiRequest {
   chat_model_name: string
   embedding_dim: number
   tool: string | null
-  ai_domain: string | null
-  prompt: string | null
+  ai_domain:string | null
+  prompt: string // Optional field for custom prompt
 }
 
 export interface AiAgent {
@@ -24,46 +24,36 @@ export interface AiAgent {
   embedding_dim: number
   created_at: string
   tool: string | null
-  ai_domain: string | null
-  prompt: string | null
+  ai_domain:string | null
+  prompt: string // Custom prompt for the AI agent
 }
 
 export interface AiCollection {
-  ai_id: string
-  ai_name: string
-  collection_id: string | null
-  collection_name: string | null
-  created_at: string
-  created_by: string
-  model_id: string
-  user_id: string
+  ai_id: string;
+  ai_name: string;
+  collection_id: string | null;
+  collection_name: string | null;
+  created_at: string;
+  created_by: string;
+  model_id: string;
+  user_id: string;
   // Add new fields from the backend
-  collection_prompt: string | null
-  start_text: string | null
+  collection_prompt: string | null;
+  start_text: string | null;
 }
 
-export interface SuperUploadRequest {
-  files: File[];
-  ai_id: string;
-  collection_id: string;
-  user_id: string;
-  custom_prefix?: string;
-  chunk_size?: number;
-  max_tokens?: number;
-  xlsx_row_limit?: number;
-}
 
 class AiService {
   private baseUrl = API_CONFIG.BASE_URL
 
-  public getUserId(): string {
+  private getUserId(): string {
     const user = authService.getCurrentUser()
     return user?.id || ""
   }
 
   private getAuthHeaders(): Record<string, string> {
     const token = authService.getAccessToken()
-    return token ? { Authorization: `Bearer ${token}` } : {}
+    return token ? { "Authorization": `Bearer ${token}` } : {}
   }
 
   async createAi(data: CreateAiRequest): Promise<any> {
@@ -106,10 +96,9 @@ class AiService {
     try {
       logger.info("Fetching all AIs", { user_id: this.getUserId() })
 
-      const userId = this.getUserId()
-      const response = await fetch(`${this.baseUrl}/ai?user_id=${userId}`, {
-        headers: this.getAuthHeaders(),
-      })
+      // Since there's no specific endpoint to list all AIs, we'll use a mock approach for now
+      // You can implement this endpoint in your backend if needed
+      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.LIST_AIS}?user_id=${this.getUserId()}`)
 
       if (!response.ok) {
         // If the endpoint doesn't exist, return empty array for now
@@ -169,7 +158,6 @@ class AiService {
       throw error
     }
   }
-  
   async editAi(aiId: string, data: Partial<{
     api_key: string
     chat_model_name: string
@@ -178,12 +166,18 @@ class AiService {
     name: string
     provider: string
     tool: string | null
-    ai_domain: string | null
-    prompt: string | null
+    ai_domain:string | null
+    prompt: string | null // Optional field for custom prompt
   }>): Promise<void> {
     try {
       const userId = this.getUserId()
       logger.info("Editing AI agent", { ai_id: aiId, user_id: userId, data })
+
+      // Chỉ gửi các trường user nhập
+      const body: Record<string, any> = {}
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") body[key] = value
+      })
 
       const response = await fetch(`${this.baseUrl}/ai/${aiId}?user_id=${userId}`, {
         method: "PUT",
@@ -191,7 +185,7 @@ class AiService {
           "Content-Type": "application/json",
           ...this.getAuthHeaders(),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -204,6 +198,7 @@ class AiService {
       throw error
     }
   }
+
 
   async createCollection(aiId: string, name: string): Promise<any> {
     try {
@@ -328,7 +323,7 @@ class AiService {
         `${this.baseUrl}${API_ENDPOINTS.GET_COLLECTION_DOCUMENTS(collectionId)}?user_id=${userId}`,
         {
           headers: this.getAuthHeaders(),
-        },
+        }
       )
 
       if (!response.ok) {
@@ -377,7 +372,7 @@ class AiService {
 
       const userId = this.getUserId()
       let url = `${this.baseUrl}${API_ENDPOINTS.GET_DOCUMENTS}?user_id=${userId}`
-
+      
       if (aiId) {
         url += `&ai_id=${aiId}`
       }
@@ -492,23 +487,29 @@ class AiService {
       throw error
     }
   }
-
-  // New method to edit collection details
-  async editCollection(collectionId: string, data: any): Promise<any> {
+  
+    // New method to edit collection details
+  async editCollection(collectionId: string, data: { new_name?: string; collection_prompt?: string | null; start_text?: string | null }): Promise<void> {
     try {
-      const userId = this.getUserId()
-      logger.info("Editing collection via API", { collection_id: collectionId, user_id: userId })
+      logger.info("Editing collection details", { collection_id: collectionId, data })
 
-      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.EDIT_COLLECTION}?user_id=${userId}`, {
-        method: "PUT",
+      const userId = this.getUserId()
+      if (!userId) {
+        throw new Error("User not authenticated")
+      }
+
+      const body = {
+        collection_id: collectionId,
+        ...data,
+      }
+
+      const response = await fetch(`${this.baseUrl}${API_ENDPOINTS.EDIT_COLLECTION}`, {
+        method: "PUT", // Assuming PUT method for update
         headers: {
           "Content-Type": "application/json",
           ...this.getAuthHeaders(),
         },
-        body: JSON.stringify({
-          collection_id: collectionId,
-          ...data,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -518,8 +519,6 @@ class AiService {
       }
 
       logger.info("Collection edited successfully", { collection_id: collectionId })
-      const result = await response.json()
-      return result
     } catch (error) {
       logger.error("Failed to edit collection", { error: error instanceof Error ? error.message : String(error) })
       throw error
@@ -528,25 +527,26 @@ class AiService {
 
   async getCollectionByName(name: string): Promise<AiCollection | null> {
     try {
-    const response = await fetch(
+      const response = await fetch(
         `${this.baseUrl}${API_ENDPOINTS.GET_COLLECTION_BY_NAME(name)}`,
         { headers: this.getAuthHeaders() }
-        )
+      )
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-
+  
       const result = await response.json()
       logger.info("Collection fetched by name successfully", { name, collection_id: result.id })
       return {
         ai_id: result.ai_id,
-        ai_name: "", // if backend does not return
+        ai_name: "", // nếu backend chưa trả về
         collection_id: result.id,
         collection_name: result.name,
         created_at: result.created_at,
-        created_by: "", // if backend does not return
+        created_by: "", // nếu backend chưa trả về
         model_id: result.milvus_collection_name,
-        user_id: "", // if backend does not return
+        user_id: "", // nếu backend chưa trả về
         collection_prompt: result.collection_prompt,
         start_text: result.start_text,
       }
@@ -555,48 +555,7 @@ class AiService {
       return null
     }
   }
-
-
-  async superUploadDocuments({ files, ai_id, collection_id, user_id, custom_prefix, chunk_size, max_tokens, xlsx_row_limit }: SuperUploadRequest) {
-    try {
-      const formData = new FormData();
-      // Lặp qua danh sách file và thêm vào FormData
-      files.forEach(file => {
-        formData.append('files', file);
-      });
-
-      formData.append('ai_id', ai_id);
-      formData.append('collection_id', collection_id);
-      formData.append('user_id', user_id);
-
-      // Thêm các tham số tùy chỉnh vào URL
-      const queryParams = new URLSearchParams();
-      if (custom_prefix) queryParams.append('custom_prefix', custom_prefix);
-      if (chunk_size !== undefined) queryParams.append('chunk_size', chunk_size.toString());
-      if (max_tokens !== undefined) queryParams.append('max_tokens', max_tokens.toString());
-      if (xlsx_row_limit !== undefined) queryParams.append('xlsx_row_limit', xlsx_row_limit.toString());
-
-      const url = `${this.baseUrl}${API_ENDPOINTS.SUPER_UPLOAD_DOCUMENTS}?${queryParams.toString()}`;
-
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-        headers: this.getAuthHeaders(), // Sử dụng header có sẵn
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
-      }
-
-      const result = await response.json();
-      logger.info("Documents uploaded successfully", { result });
-      return result;
-    } catch (error) {
-      logger.error("Failed to upload documents", { error: error instanceof Error ? error.message : String(error) });
-      throw error;
-    }
-  }
+  
 
 }
 

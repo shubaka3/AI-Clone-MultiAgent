@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { logger } from "@/lib/logger"
+import { PasswordInput } from "@/components/ui/Passwordeyes"
+
 
 interface UpdateAiModalProps {
   isOpen: boolean
@@ -21,6 +23,7 @@ interface UpdateAiModalProps {
     embedding_dim: string | number
     tool: string
     ai_domain: string
+    prompt:string
   }>
 }
 
@@ -34,6 +37,7 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
     embedding_dim: "",
     tool: "",
     ai_domain: "",
+    prompt:""
   })
 
   // Reset form mỗi khi mở modal edit agent mới
@@ -47,6 +51,7 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
       embedding_dim: initialData?.embedding_dim?.toString() || "",
       tool: initialData?.tool || "",
       ai_domain: initialData?.ai_domain || "",
+      prompt:initialData?.prompt || "",
     })
   }, [initialData, isOpen])
 
@@ -99,6 +104,15 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
     onSubmit(dataToSend)
   }
 
+  // Đặt ở đầu component
+  const [copied, setCopied] = useState<string | null>(null)
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(text)
+    setTimeout(() => setCopied(null), 2000) // reset sau 2s
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -133,16 +147,25 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
           </div>
 
           {formData.provider !== "custom" && (
-            <div>
-              <Label htmlFor="api_key">API Key</Label>
-              <Input
-                id="api_key"
-                type="password"
-                value={formData.api_key}
-                onChange={(e) => setFormData((prev) => ({ ...prev, api_key: e.target.value }))}
-                placeholder="Enter API key"
-              />
-            </div>
+            // <div>
+            //   <Label htmlFor="api_key">API Key</Label>
+            //   <Input
+            //     id="api_key"
+            //     type="password"
+            //     value={formData.api_key}
+            //     onChange={(e) => setFormData((prev) => ({ ...prev, api_key: e.target.value }))}
+            //     placeholder="Enter API key"
+            //   />
+            // </div>
+            <PasswordInput
+            id="api_key"
+            label="API Key"
+            value={formData.api_key}
+            onChange={(val) =>
+              setFormData((prev) => ({ ...prev, api_key: val }))
+            }
+            placeholder="Enter API key"
+          />
           )}
 
           {formData.provider !== "custom" && (
@@ -179,6 +202,62 @@ export function UpdateAiModal({ isOpen, onClose, onSubmit, initialData }: Update
               />
             </div>
           )}
+
+
+        {formData.provider !== "custom" && (
+          <div>
+            <Label htmlFor="prompt">Prompt</Label>
+            <textarea
+              id="prompt"
+              value={formData.prompt}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, prompt: e.target.value }))
+              }
+              placeholder="Enter prompt for OpenAI"
+              className="w-full min-h-[150px] rounded-md border border-gray-300 p-2 text-sm"
+            />
+
+
+            {/* Gợi ý chèn biến */}
+            <div className="mt-2 text-sm text-gray-600">
+              <span className="font-medium">Gợi ý:</span> Bạn có thể dùng các placeholder sau để chèn dữ liệu vào prompt.
+              <div className="mt-2 flex gap-2 flex-wrap">
+                {["{context}", "{question}"].map((token) => (
+                  <button
+                    key={token}
+                    type="button"
+                    onClick={() => handleCopy(token)}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1 transition
+                      ${copied === token ? "bg-green-200 text-green-800" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
+                  >
+                    <span className="font-mono">{token}</span>
+                    {copied === token ? (
+                      <span className="text-xs font-medium">✓ Copied!</span>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 text-gray-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16h8m-6 4h6a2 2 0 002-2v-6m-2 2H8a2 2 0 01-2-2V6a2 2 0 012-2h6a2 2 0 012 2v2"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+
+
 
           {formData.provider === "custom" && (
             <>

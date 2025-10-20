@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, FileText, Settings, Activity } from "lucide-react"
+import { Bot, FileText, Settings, Activity, LayoutGrid } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +24,12 @@ const menuItems = [
     icon: Bot,
     description: "Manage your AI agents",
   },
+  {
+    id: "ai-collections",
+    title: "Modle Id Manager",
+    icon: LayoutGrid,
+    description: "View your AI collections",
+  }, // thêm layout grid ơr trên
   {
     id: "logs",
     title: "System Logs",

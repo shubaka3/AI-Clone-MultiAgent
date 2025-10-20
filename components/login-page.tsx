@@ -148,11 +148,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </div>
           </form>
 
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg">
+          {/* <div className="mt-6 p-4 bg-slate-50 rounded-lg">
             <p className="text-sm text-slate-600 mb-2">Test credentials:</p>
             <p className="text-xs text-slate-500">Email: user@example.com</p>
             <p className="text-xs text-slate-500">Password: 123456</p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>

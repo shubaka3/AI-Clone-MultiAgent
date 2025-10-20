@@ -28,13 +28,24 @@ export const API_ENDPOINTS = {
   GET_COLLECTION_DETAILS: (collectionId: string) => `/collections/${collectionId}`,
   LIST_AI_COLLECTIONS: (aiId: string) => `/ai/${aiId}/collections`,
   DELETE_COLLECTION: (collectionId: string) => `/collections/${collectionId}`,
+  EDIT_COLLECTION: "/collections/edit",
+  GET_COLLECTION_BY_NAME: (name: string) => `/collections/by-name/${encodeURIComponent(name)}`,
 
+
+  // tracking grid view dashboard get document
+  LIST_USER_AI_COLLECTIONS: "/ai_collections",
+
+  
   // Document Management
+  SUPER_UPLOAD_DOCUMENTS: "/documents/super-upload-multiple",
   UPLOAD_DOCUMENT: "/documents/upload",
   GET_COLLECTION_DOCUMENTS: (collectionId: string) => `/collections/${collectionId}/sources`,
   DELETE_DOCUMENT: (collectionId: string, filename: string) => `/collections/${collectionId}/sources/${filename}`,
   GET_ALL_DOCUMENTS: "/documents",
   GET_DOCUMENTS: "/documents",
+
+     // Thêm endpoint mới cho việc trích xuất nội dung
+  EXTRACT_PAGES: "https://vmentor-service.emg.edu.vn/api/extract-first-pages",
 
   // Chat
   CHAT_COMPLETION: "/chat/completions",
